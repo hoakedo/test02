@@ -1,8 +1,25 @@
 # Input bindings are passed in via param block.
 param($Timer)
 
-# Storage 接続文字列（Functions が使う既定のもの）
-$azstoragestring = $env:AzureWebJobsStorage
+Import-Module Az.Storage -ErrorAction Stop
+
+# ===== 直書き（envは使わない）=====
+$azstoragestring = "DefaultEndpointsProtocol=https;AccountName=XXXX;AccountKey=YYYY;EndpointSuffix=core.windows.net"
+
+$workspaceId     = "4eace82d-dbcb-4117-9bef-872f18ed14cf"
+$workspaceKey    = "tNHrdV//E0d5RK3myY/xmHMZ1m1K+OQ1oU44rv3evAaC+EwOZ0T2pYD8zd+qkACtxns2kAGIrpkVUGpuFcNdBw=="
+
+$customLogName   = "O365AuditLogs"
+
+$clientID        = "1b997575-614f-4a49-82d3-defa5d3cbf2d"
+$clientSecret    = "NjK8Q~P~M1blB0zXPI.S~kyd6_45NiWPh-sSuaVa"
+$tenantGuid      = "bc752680-4bf8-4550-a185-fec14c17c3fa"
+$domain          = "mocauser38501gmail.onmicrosoft.com"
+
+$contentTypes 	 = "Audit.General,Audit.Exchange,Audit.SharePoint".Split(",")
+$publisher       = "00000000-0000-0000-0000-000000000000"
+$recordTypes     = "0"
+# ===================================
 
 if ([string]::IsNullOrEmpty($azstoragestring)) {
     throw "AzureWebJobsStorage が空です"
@@ -194,11 +211,10 @@ function Get-O365Data{
         [parameter(Mandatory = $true, Position = 3)]
         [string]$tenantGuid
     )
-    #List Available Content
-    $contentTypes = $env:contentTypes.split(",")
+
     #Loop for each content Type like Audit.General
-    foreach($contentType in $contentTypes){
-        $listAvailableContentUri = "https://$managementApi/api/v1.0/$tenantGUID/activity/feed/subscriptions/content?contentType=$contentType&PublisherIdentifier=$env:publisher&startTime=$startTime&endTime=$endTime"
+    foreach ($contentType in $contentTypes) {
+        $listAvailableContentUri = "https://$managementApi/api/v1.0/$tenantGUID/activity/feed/subscriptions/content?contentType=$contentType&PublisherIdentifier=$publisher&startTime=$startTime&endTime=$endTime"
         do {
             #List Available Content
             $contentResult = Invoke-RestMethod -Method GET -Headers $headerParams -Uri $listAvailableContentUri
@@ -212,22 +228,22 @@ function Get-O365Data{
                 foreach($event in $data){
                     #Filtering for Recrord types
                     #Get all Record Types
-                    if($env:recordTypes -eq "0"){
+                    if($recordTypes -eq "0"){
                         #We dont need Cloud App Security Alerts due to MCAS connector
                         if(($event.Source) -ne "Cloud App Security"){
                             #Write each event to Log A
-                            $writeResult = Write-OMSLogfile (Get-Date) $env:customLogName $event $env:workspaceId $env:workspaceKey
+                            $writeResult  = Write-OMSLogfile (Get-Date) $customLogName $event $workspaceId $workspaceKey
                             #$writeResult
                         }
                     }
                     else{
                         #Get only certain record types
-                        $types = ($env:recordTypes).split(",")
+                        $types = $recordTypes.Split(",")
                         if(($event.RecordType) -in $types){
                             #We dont need Cloud App Security Alerts due to MCAS connector
                             if(($event.Source) -ne "Cloud App Security"){
                                 #write each event to Log A
-                                $writeResult = Write-OMSLogfile (Get-Date) $env:customLogName $event $env:workspaceId $env:workspaceKey
+                                $writeResult  = Write-OMSLogfile (Get-Date) $customLogName $event $workspaceId $workspaceKey
                                 #$writeResult
                             }
                         }
@@ -254,34 +270,9 @@ if ($Timer.IsPastDue) {
     Write-Host "PowerShell timer is running late!"
 }
 
-$LAURI = $env:LAURI
-if (-Not [string]::IsNullOrEmpty($LAURI)){
-	if($LAURI.Trim() -notmatch 'https:\/\/([\w\-]+)\.ods\.opinsights\.azure.([a-zA-Z\.]+)$')
-	{
-		Write-Error -Message "MCASActivity-SecurityEvents: Invalid Log Analytics Uri." -ErrorAction Stop
-		Exit
-	}
-}
-$LoginURL = $env:loginEndpoint
-if (-Not [string]::IsNullOrEmpty($LoginURL)){
-	if($LoginURL.Trim() -notin @("https://login.microsoftonline.us/","https://login.partner.microsoftonline.cn/","https://login.microsoftonline.com/"))
-	{
-		Write-Error -Message "MCASActivity-SecurityEvents: Invalid Login Endpoint Uri." -ErrorAction Stop
-		Exit
-	}
-}
-$managementApi = $env:managementApi
-if (-Not [string]::IsNullOrEmpty($managementApi)){
-	if($managementApi.Trim() -notin @("manage.office.com","manage-gcc.office.com","manage.office365.us","manage.protection.apps.mil"))
-	{
-		Write-Error -Message "MCASActivity-SecurityEvents: Invalid Management API Endpoint." -ErrorAction Stop
-		Exit
-	}
-} else {$managementApi = "manage.office.com"}
 
 #add last run time to blob file to ensure no missed packages
 $endTime = $currentUTCtime | Get-Date -Format yyyy-MM-ddTHH:mm:ss
-$azstoragestring = $Env:WEBSITE_CONTENTAZUREFILECONNECTIONSTRING
 $Context = New-AzStorageContext -ConnectionString $azstoragestring
 if((Get-AzStorageContainer -Context $Context).Name -contains "lastlog"){
     #Set Container
@@ -303,10 +294,11 @@ $endTime
 $lastlogTime
 
 
-$headerParams = Get-AuthToken $env:clientID $env:clientSecret $env:domain $env:tenantGuid
-Get-O365Data $startTime $endTime $headerParams $env:tenantGuid
+$headerParams = Get-AuthToken $clientID $clientSecret $domain $tenantGuid
+Get-O365Data  $startTime $endTime $headerParams $tenantGuid
 
 
 # Write an information log with the current time.
 Write-Host "PowerShell timer trigger function ran! TIME: $currentUTCtime"
+
 
