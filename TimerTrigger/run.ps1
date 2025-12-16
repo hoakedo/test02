@@ -1,6 +1,18 @@
 # Input bindings are passed in via param block.
 param($Timer)
 
+# Storage 接続文字列（Functions が使う既定のもの）
+$azstoragestring = $env:AzureWebJobsStorage
+
+if ([string]::IsNullOrEmpty($azstoragestring)) {
+    throw "AzureWebJobsStorage が空です"
+}
+
+# start / end time を初期化
+$startTime = (Get-Date).AddMinutes(-5).ToString("o")
+$endTime   = (Get-Date).ToString("o")
+
+
 #Import-module .\TimerTrigger\modules\Write-OMSLogfile.ps1
 ###################################################################################
 #  API Log to OMS Log Analytics Workspace
@@ -297,3 +309,4 @@ Get-O365Data $startTime $endTime $headerParams $env:tenantGuid
 
 # Write an information log with the current time.
 Write-Host "PowerShell timer trigger function ran! TIME: $currentUTCtime"
+
