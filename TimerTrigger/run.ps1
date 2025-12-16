@@ -2,6 +2,8 @@
 param($Timer)
 
 Import-Module Az.Storage -ErrorAction Stop
+$baseUri  = "https://manage.office.com"
+$tenantId = "bc752680-4bf8-4550-a185-fec14c17c3fa"
 
 # ===== 直書き（envは使わない）=====
 $azstoragestring = "DefaultEndpointsProtocol=https;AccountName=XXXX;AccountKey=YYYY;EndpointSuffix=core.windows.net"
@@ -300,5 +302,6 @@ Get-O365Data  $startTime $endTime $headerParams $tenantGuid
 
 # Write an information log with the current time.
 Write-Host "PowerShell timer trigger function ran! TIME: $currentUTCtime"
+
 
 
