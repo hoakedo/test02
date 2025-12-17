@@ -6,7 +6,7 @@ $baseUri  = "https://manage.office.com"
 $tenantId = "bc752680-4bf8-4550-a185-fec14c17c3fa"
 
 # ===== 直書き（envは使わない）=====
-$azstoragestring = "DefaultEndpointsProtocol=https;AccountName=XXXX;AccountKey=YYYY;EndpointSuffix=core.windows.net"
+#$azstoragestring = "DefaultEndpointsProtocol=https;AccountName=XXXX;AccountKey=YYYY;EndpointSuffix=core.windows.net"
 
 $workspaceId     = "4eace82d-dbcb-4117-9bef-872f18ed14cf"
 $workspaceKey    = "tNHrdV//E0d5RK3myY/xmHMZ1m1K+OQ1oU44rv3evAaC+EwOZ0T2pYD8zd+qkACtxns2kAGIrpkVUGpuFcNdBw=="
@@ -23,9 +23,9 @@ $publisher       = "00000000-0000-0000-0000-000000000000"
 $recordTypes     = "0"
 # ===================================
 
-if ([string]::IsNullOrEmpty($azstoragestring)) {
-    throw "AzureWebJobsStorage が空です"
-}
+#if ([string]::IsNullOrEmpty($azstoragestring)) {
+#    throw "AzureWebJobsStorage が空です"
+#}
 
 # start / end time を初期化
 $startTime = (Get-Date).AddMinutes(-5).ToString("o")
@@ -274,26 +274,26 @@ if ($Timer.IsPastDue) {
 
 
 #add last run time to blob file to ensure no missed packages
-$endTime = $currentUTCtime | Get-Date -Format yyyy-MM-ddTHH:mm:ss
-$Context = New-AzStorageContext -ConnectionString $azstoragestring
-if((Get-AzStorageContainer -Context $Context).Name -contains "lastlog"){
-    #Set Container
-    $Blob = Get-AzStorageBlob -Context $Context -Container (Get-AzStorageContainer -Name "lastlog" -Context $Context).Name -Blob "lastlog.log"
-    $lastlogTime = $blob.ICloudBlob.DownloadText()
-    $startTime = $lastlogTime | Get-Date -Format yyyy-MM-ddTHH:mm:ss
-    $endTime | Out-File "$env:TEMP\lastlog.log"
-    Set-AzStorageBlobContent -file "$env:TEMP\lastlog.log" -Container (Get-AzStorageContainer -Name "lastlog" -Context $Context).Name -Context $Context -Force
-}
-else {
-    #create container
-    $azStorageContainer = New-AzStorageContainer -Name "lastlog" -Context $Context
-    $endTime | Out-File "$env:TEMP\lastlog.log"
-    Set-AzStorageBlobContent -file "$env:TEMP\lastlog.log" -Container $azStorageContainer.name -Context $Context -Force
-    $startTime = $currentUTCtime.AddSeconds(-300) | Get-Date -Format yyyy-MM-ddTHH:mm:ss
-}
-$startTime
-$endTime
-$lastlogTime
+#$endTime = $currentUTCtime | Get-Date -Format yyyy-MM-ddTHH:mm:ss
+#$Context = New-AzStorageContext -ConnectionString $azstoragestring
+#if((Get-AzStorageContainer -Context $Context).Name -contains "lastlog"){
+#    #Set Container
+#    $Blob = Get-AzStorageBlob -Context $Context -Container (Get-AzStorageContainer -Name "lastlog" -Context $Context).Name -Blob "lastlog.log"
+#    $lastlogTime = $blob.ICloudBlob.DownloadText()
+#    $startTime = $lastlogTime | Get-Date -Format yyyy-MM-ddTHH:mm:ss
+#    $endTime | Out-File "$env:TEMP\lastlog.log"
+#    Set-AzStorageBlobContent -file "$env:TEMP\lastlog.log" -Container (Get-AzStorageContainer -Name "lastlog" -Context $Context).Name -Context $Context -Force
+#}
+#else {
+#    #create container
+#    $azStorageContainer = New-AzStorageContainer -Name "lastlog" -Context $Context
+#    $endTime | Out-File "$env:TEMP\lastlog.log"
+#    Set-AzStorageBlobContent -file "$env:TEMP\lastlog.log" -Container $azStorageContainer.name -Context $Context -Force
+#    $startTime = $currentUTCtime.AddSeconds(-300) | Get-Date -Format yyyy-MM-ddTHH:mm:ss
+#}
+#$startTime
+#$endTime
+#$lastlogTime
 
 
 $headerParams = Get-AuthToken $clientID $clientSecret $domain $tenantGuid
@@ -302,6 +302,7 @@ Get-O365Data  $startTime $endTime $headerParams $tenantGuid
 
 # Write an information log with the current time.
 Write-Host "PowerShell timer trigger function ran! TIME: $currentUTCtime"
+
 
 
 
